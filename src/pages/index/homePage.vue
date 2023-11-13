@@ -161,15 +161,6 @@ watch(
   }
 )
 
-watch(
-  () => keys.up,
-  (up) => {
-    if (up) {
-      jump(player.body)
-    }
-  }
-)
-
 onMounted(() => {
   const render = Render.create({
     element: canvasContainer.value,
@@ -192,11 +183,11 @@ onMounted(() => {
   window.addEventListener('keydown', (event) => {
     switch (event.key) {
       case 'ArrowLeft':
-        if (keys.right) break
+        keys.right = false
         keys.left = true
         break
       case 'ArrowRight':
-        if (keys.left) break
+        keys.left = false
         keys.right = true
         break
       case 'ArrowUp':
@@ -232,6 +223,9 @@ onMounted(() => {
       moveRight(player.body)
     } else {
       stopMove(player.body)
+    }
+    if (keys.up) {
+      jump(player.body)
     }
     window.requestAnimationFrame(tick)
   }
