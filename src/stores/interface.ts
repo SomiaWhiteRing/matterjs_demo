@@ -7,12 +7,12 @@ export const useInterfaceStore = defineStore('interface', () => {
     blockHeight: 5,
     blockWidth: 5,
     // 游戏主界面画幅的宽高
-    canvasHeight: 10,
-    canvasWidth: 18
+    heightBlockNum: 10,
+    widthBlockNum: 18
   }
 
   // 页面的缩放比例
-  let scale = 2
+  let scale = 15
   const setScale = (value: number) => {
     scale = value
   }

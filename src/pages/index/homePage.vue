@@ -4,62 +4,43 @@
 
 <script lang="ts" setup>
 import { useInterfaceStore } from '@/stores/interface'
+import sprites, { Cube, Ground } from '@/components/sprites/index'
 import Matter from 'matter-js'
-const { Engine, Render, World, Bodies, Runner, Body, Composite } = Matter
+const { Engine, Render, World, Runner, Body, Composite } = Matter
 
 const engine = Engine.create()
 const canvasContainer = ref<HTMLElement>()
 
-// 定义基础画幅
-const width = 18 * 5
-const height = 10 * 5
-// 获取页面画幅
-const canvasWidth = window.innerWidth
-const canvasHeight = window.innerHeight
-// 计算最大整数缩放比例
-const scale = Math.floor(Math.min(canvasWidth / width, canvasHeight / height))
-// 将缩放比例
-useInterfaceStore().setScale(scale)
-
-// 构建player角色类，其中包含player的body，当前的朝向
-const player = {
-  body: Bodies.rectangle(400, 200, 80, 80),
-  facing: 'right'
-}
-// player.body不可产生扭矩
-Body.setInertia(player.body, Infinity)
-// player.body不与cube碰撞，但是与ground碰撞
-player.body.collisionFilter.category = 2
-player.body.collisionFilter.mask = 1 | 3
-player.body.friction = 1
+// 使用引入的playerSystem构建player类
+const player = sprites.player.create(5, 2)
 
 // 构建cube类
-const cubes: Matter.Body[] = []
-function drawCube(x: number, y: number) {
-  const cube = Bodies.rectangle(x, y, 50, 50)
-  Body.setInertia(cube, Infinity)
-  cube.collisionFilter.category = 4
-  cube.collisionFilter.mask = 1 | 2
-  return cube
-}
-cubes.push(drawCube(400, 0))
+const cubes: Cube[] = []
+cubes.push(sprites.cube.create(5, 3))
 
 // 构建ground类
-const grounds: Matter.Body[] = []
-function drawGround(x: number, y: number, width: number, height: number) {
-  const ground = Bodies.rectangle(x, y, width, height, { isStatic: true })
-  ground.collisionFilter.category = 1
-  ground.collisionFilter.mask = 2 | 4
-  ground.friction = 0
-  return ground
+const grounds: Ground[] = []
+// 围绕着10*18的矩形构建ground
+for (let i = 1; i < 17; i++) {
+  grounds.push(sprites.ground.create(i, 9))
+  grounds.push(sprites.ground.create(i, 0))
 }
-// 四面围墙
-grounds.push(drawGround(400, 610, 810, 60))
-grounds.push(drawGround(400, -10, 810, 60))
-grounds.push(drawGround(-10, 300, 60, 610))
-grounds.push(drawGround(810, 300, 60, 610))
-// 绘制一块突起的地面
-grounds.push(drawGround(400, 600, 200, 250))
+for (let i = 1; i < 9; i++) {
+  grounds.push(sprites.ground.create(0, i))
+  grounds.push(sprites.ground.create(17, i))
+}
+grounds.push(sprites.ground.create(0, 0))
+grounds.push(sprites.ground.create(17, 0))
+grounds.push(sprites.ground.create(0, 9))
+grounds.push(sprites.ground.create(17, 9))
+// 构建一些随机的ground
+for (let i = 1; i < 16; i++) {
+  for (let j = 1; j < 9; j++) {
+    if (Math.random() > 0.8) {
+      grounds.push(sprites.ground.create(i, j))
+    }
+  }
+}
 
 // 记录按键状态
 const keys = reactive({
@@ -126,28 +107,28 @@ function hold(_player: Matter.Body) {
     return
   }
 
-  const body = cubes.find((body) => {
-    return Matter.Bounds.overlaps(body.bounds, _player.bounds)
-  })
+  const cube = cubes.find((cube) => {
+    return Matter.Bounds.overlaps(cube.body.bounds, _player.bounds)
+  })?.body
 
-  if (!body) {
+  if (!cube) {
     return
   }
 
-  holdingCube.value = body
-  Body.setVelocity(body, { x: 0, y: 0 })
-  Body.setAngularVelocity(body, 0)
+  holdingCube.value = cube
+  Body.setVelocity(cube, { x: 0, y: 0 })
+  Body.setAngularVelocity(cube, 0)
   // 将cube的位置与player的位置绑定
-  Body.setPosition(body, {
+  Body.setPosition(cube, {
     x: _player.position.x + 65,
     y: _player.position.y - 5
   })
   // 修改cube的碰撞过滤器，使其能够与player碰撞
-  body.collisionFilter.category = 1
+  cube.collisionFilter.category = 1
   // 创建一个约束，将cube绑定到player上
   holdingConstraint.value = Matter.Constraint.create({
     bodyA: _player,
-    bodyB: body,
+    bodyB: cube,
     stiffness: 1,
     length: 0,
     pointA: { x: 40, y: 0 },
@@ -178,14 +159,24 @@ onMounted(() => {
     element: canvasContainer.value,
     engine,
     options: {
-      width: 800,
-      height: 600,
+      width:
+        useInterfaceStore().basic.widthBlockNum *
+        useInterfaceStore().basic.blockWidth *
+        useInterfaceStore().scale,
+      height:
+        useInterfaceStore().basic.heightBlockNum *
+        useInterfaceStore().basic.blockHeight *
+        useInterfaceStore().scale,
       wireframes: false,
-      background: '#fafafa'
+      background: '#9dab88'
     }
   })
 
-  World.add(engine.world, [player.body, ...grounds, ...cubes])
+  World.add(engine.world, [
+    player.body,
+    ...grounds.map((ground) => ground.body),
+    ...cubes.map((cube) => cube.body)
+  ])
 
   Render.run(render)
 
@@ -244,14 +235,14 @@ onMounted(() => {
 
   window.requestAnimationFrame(tick)
 
-  window.addEventListener('resize', () => {
-    render.bounds.max.x = window.innerWidth
-    render.bounds.max.y = window.innerHeight
-    render.options.width = window.innerWidth
-    render.options.height = window.innerHeight
-    render.canvas.width = window.innerWidth
-    render.canvas.height = window.innerHeight
-    Matter.Render.setPixelRatio(render, window.devicePixelRatio) // added this
-  })
+  // window.addEventListener('resize', () => {
+  //   render.bounds.max.x = window.innerWidth
+  //   render.bounds.max.y = window.innerHeight
+  //   render.options.width = window.innerWidth
+  //   render.options.height = window.innerHeight
+  //   render.canvas.width = window.innerWidth
+  //   render.canvas.height = window.innerHeight
+  //   Matter.Render.setPixelRatio(render, window.devicePixelRatio) // added this
+  // })
 })
 </script>
