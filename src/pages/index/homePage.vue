@@ -3,11 +3,23 @@
 </template>
 
 <script lang="ts" setup>
-import Matter, { Composite } from 'matter-js'
-const { Engine, Render, World, Bodies, Runner, Body } = Matter
+import { useInterfaceStore } from '@/stores/interface'
+import Matter from 'matter-js'
+const { Engine, Render, World, Bodies, Runner, Body, Composite } = Matter
 
 const engine = Engine.create()
 const canvasContainer = ref<HTMLElement>()
+
+// 定义基础画幅
+const width = 18 * 5
+const height = 10 * 5
+// 获取页面画幅
+const canvasWidth = window.innerWidth
+const canvasHeight = window.innerHeight
+// 计算最大整数缩放比例
+const scale = Math.floor(Math.min(canvasWidth / width, canvasHeight / height))
+// 将缩放比例
+useInterfaceStore().setScale(scale)
 
 // 构建player角色类，其中包含player的body，当前的朝向
 const player = {
@@ -231,5 +243,15 @@ onMounted(() => {
   }
 
   window.requestAnimationFrame(tick)
+
+  window.addEventListener('resize', () => {
+    render.bounds.max.x = window.innerWidth
+    render.bounds.max.y = window.innerHeight
+    render.options.width = window.innerWidth
+    render.options.height = window.innerHeight
+    render.canvas.width = window.innerWidth
+    render.canvas.height = window.innerHeight
+    Matter.Render.setPixelRatio(render, window.devicePixelRatio) // added this
+  })
 })
 </script>
