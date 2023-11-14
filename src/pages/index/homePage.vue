@@ -4,40 +4,30 @@
 
 <script lang="ts" setup>
 import { useInterfaceStore } from '@/stores/interface'
-import sprites, { Cube, Ground } from '@/components/sprites/index'
+import sprites from '@/components/sprites/index'
+import active from '@/components/actions/activeElements'
 import Matter from 'matter-js'
 const { Engine, Render, World, Runner, Body, Composite } = Matter
 
 const engine = Engine.create()
 const canvasContainer = ref<HTMLElement>()
 
-// 使用引入的playerSystem构建player类
-const player = sprites.player.create(5, 2)
+// 构建player类
+active.setPlayer(sprites.player.create(1, 1))
 
 // 构建cube类
-const cubes: Cube[] = []
-cubes.push(sprites.cube.create(5, 3))
+active.resetCubes()
+active.addCube(sprites.cube.create(5, 3))
 
 // 构建ground类
-const grounds: Ground[] = []
+active.resetGrounds()
 // 围绕着10*18的矩形构建ground
-for (let i = 1; i < 17; i++) {
-  grounds.push(sprites.ground.create(i, 9))
-  grounds.push(sprites.ground.create(i, 0))
-}
-for (let i = 1; i < 9; i++) {
-  grounds.push(sprites.ground.create(0, i))
-  grounds.push(sprites.ground.create(17, i))
-}
-grounds.push(sprites.ground.create(0, 0))
-grounds.push(sprites.ground.create(17, 0))
-grounds.push(sprites.ground.create(0, 9))
-grounds.push(sprites.ground.create(17, 9))
-// 构建一些随机的ground
-for (let i = 1; i < 16; i++) {
-  for (let j = 1; j < 9; j++) {
-    if (Math.random() > 0.8) {
-      grounds.push(sprites.ground.create(i, j))
+for (let i = 0; i < 18; i++) {
+  for (let j = 0; j < 10; j++) {
+    if (i === 0 || i === 17 || j === 0 || j === 9) {
+      active.addGround(sprites.ground.create(i, j))
+    } else if (Math.random() > 0.8) {
+      active.addGround(sprites.ground.create(i, j))
     }
   }
 }
@@ -52,8 +42,8 @@ const keys = reactive({
 
 function moveLeft(box: Matter.Body) {
   // 如果当前朝向是向右，则将朝向改为向左
-  if (player.facing === 'right') {
-    player.facing = 'left'
+  if (active.player.facing === 'right') {
+    active.player.facing = 'left'
     // 如果约束仍存在，则将cube的位置改为向左
     if (holdingCube.value && holdingConstraint.value) {
       Body.setPosition(holdingCube.value, {
@@ -69,8 +59,8 @@ function moveLeft(box: Matter.Body) {
 }
 
 function moveRight(box: Matter.Body) {
-  if (player.facing === 'left') {
-    player.facing = 'right'
+  if (active.player.facing === 'left') {
+    active.player.facing = 'right'
     if (holdingCube.value && holdingConstraint.value) {
       // 如果约束仍存在，则将cube的位置改为向右
       Body.setPosition(holdingCube.value, {
@@ -107,7 +97,7 @@ function hold(_player: Matter.Body) {
     return
   }
 
-  const cube = cubes.find((cube) => {
+  const cube = active.cubes.find((cube) => {
     return Matter.Bounds.overlaps(cube.body.bounds, _player.bounds)
   })?.body
 
@@ -148,7 +138,7 @@ watch(
         holdingCube.value = null
         holdingConstraint.value = null
       } else {
-        hold(player.body)
+        hold(active.player.body)
       }
     }
   }
@@ -173,9 +163,9 @@ onMounted(() => {
   })
 
   World.add(engine.world, [
-    player.body,
-    ...grounds.map((ground) => ground.body),
-    ...cubes.map((cube) => cube.body)
+    active.player.body,
+    ...active.grounds.map((ground) => ground.body),
+    ...active.cubes.map((cube) => cube.body)
   ])
 
   Render.run(render)
@@ -221,14 +211,14 @@ onMounted(() => {
 
   function tick() {
     if (keys.left) {
-      moveLeft(player.body)
+      moveLeft(active.player.body)
     } else if (keys.right) {
-      moveRight(player.body)
+      moveRight(active.player.body)
     } else {
-      stopMove(player.body)
+      stopMove(active.player.body)
     }
     if (keys.up) {
-      jump(player.body)
+      jump(active.player.body)
     }
     window.requestAnimationFrame(tick)
   }

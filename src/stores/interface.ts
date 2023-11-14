@@ -12,7 +12,7 @@ export const useInterfaceStore = defineStore('interface', () => {
   }
 
   // 页面的缩放比例
-  let scale = 15
+  let scale = 16
   const setScale = (value: number) => {
     scale = value
   }

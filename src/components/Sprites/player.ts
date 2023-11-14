@@ -2,10 +2,19 @@ import { Bodies, Body } from 'matter-js'
 import { useInterfaceStore } from '@/stores/interface'
 
 interface Player {
-  body: Body
-  facing: 'left' | 'right'
+  body: Body // 玩家的物理对象
+  facing: 'left' | 'right' // 玩家的朝向
+  moveing: boolean // 玩家是否在移动
+  holding: boolean // 玩家是否在抓取方块
+  holdingCube: Body | null // 玩家抓取的方块
 }
 
+/**
+ * 使用 Matter.js 创建一个玩家对象。
+ * @param x - 玩家起始位置的 x 坐标。
+ * @param y - 玩家起始位置的 y 坐标。
+ * @returns 创建的玩家对象。
+ */
 function create(x: number, y: number) {
   const { basic, scale } = useInterfaceStore()
   const player: Player = {
@@ -18,7 +27,10 @@ function create(x: number, y: number) {
         label: 'player'
       }
     ),
-    facing: 'right'
+    facing: 'right',
+    moveing: false,
+    holding: false,
+    holdingCube: null
   }
   // player.body不可产生扭矩
   Body.setInertia(player.body, Infinity)
@@ -26,14 +38,10 @@ function create(x: number, y: number) {
   player.body.collisionFilter.category = 2
   player.body.collisionFilter.mask = 1 | 3
   player.body.friction = 1
-  console.log(scale)
   return player
 }
 
-const player = create(0, 0)
-
 export default {
-  player,
   create
 }
 
